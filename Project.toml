@@ -1,0 +1,4 @@
+name = "VoronoiSpiel"
+uuid = "01234567-89ab-cdef-0123-456789abcdef"
+authors = ["Imhamed Bouhamed <bouhamed@campus.tu-berlin.de>"]
+version = "0.1.0"
