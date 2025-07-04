@@ -48,3 +48,8 @@ function connect_twin!(e1::Kante, e2::Kante)
     e1.twin = e2
     e2.twin = e1
 end
+
+function add_triangle!(D::Delaunay, t::Dreieck)
+    push!(D.triangles, t)
+end
+
