@@ -5,7 +5,6 @@ struct Punkt
     x::Float64
     y::Float64
 end
-
 # --- Kante ---
 mutable struct Kante
     origin::Punkt
@@ -14,8 +13,6 @@ mutable struct Kante
     prev::Union{Nothing, Kante}
     face::Union{Nothing, Face}
 end
-
-
 
 mutable struct Dreieck <: Face
     edge::Kante
@@ -42,7 +39,6 @@ function make_triangle(a::Punkt, b::Punkt, c::Punkt)
 
     return tri
 end
-
 
 function connect_twin!(e1::Kante, e2::Kante)
     e1.twin = e2
