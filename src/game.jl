@@ -9,21 +9,25 @@ struct Player
 end
 
 # Initialisiert das Spiel mit Bounding-Triangle und Spielern
+# Spiel initialisieren
 function start_game(k::Int)
-    # Erstelle Bounding-Triangle, das das Spielfeld [0,n] × [0,n] abdeckt
-    a = Punkt(-1000.0, -1000.0)
-    b = Punkt(5000.0, -1000.0)
-    c = Punkt(2000.0, 5000.0)
+    # Bounding-Triangle (groß genug, um Spielfeld zu umschließen)
+    a = Punkt(-2000.0, -2000.0)
+    b = Punkt(7000.0, -2000.0)
+    c = Punkt(2500.0, 7000.0)
+
+    bounding_pts = Set([a, b, c])   # Save bounding points explicitly
     bounding = make_triangle(a, b, c)
 
     D = Delaunay(Set([bounding]))
 
-    # Zwei Spieler, jeweils mit k Punkten
+    # Zwei Spieler
     player1 = Player("Spieler A", :blue, Punkt[])
     player2 = Player("Spieler B", :red, Punkt[])
 
-    return D, player1, player2
+    return D, player1, player2, bounding_pts
 end
+
 
 # Fügt einen Punkt vom Spieler hinzu
 function play_turn!(player::Player, p::Punkt, D::Delaunay)

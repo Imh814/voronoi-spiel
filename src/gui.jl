@@ -2,55 +2,133 @@ using Plots
 using Colors
 using GtkObservables
 using GtkObservables.Gtk4
-using GtkObservables.CairoMakie
 
 
 include("structures.jl")
 include("game.jl")
 
 # Visualisiert das Voronoi-Diagramm mit den Punkten beider Spieler
-function plot_voronoi(vor_dict::Dict{Punkt, Vector{Punkt}}, player1::Player, player2::Player)
-    # Erstelle leeres Plot-Fenster mit quadratischem Seitenverhältnis
-    plt = plot(aspect_ratio=:equal, legend=false, size=(700, 700), grid=false)
+using Plots
 
-    for (center, polygon) in vor_dict
-        # Bestimme die Farbe je nachdem, welchem Spieler der Punkt gehört
-        if center in player1.points
-            color = player1.color
-        elseif center in player2.points
-            color = player2.color
-        else
-            color = :gray  # z.B. für neutrale Zellen oder Bounding-Triangle (sollte ignoriert werden)
+"""
+    plot_voronoi(vor_cells, vor_edges, player1, player2, dummy_points)
+
+Plots the Voronoi diagram:
+- player cells are filled with color
+- Voronoi vertices as green diamonds
+- Voronoi edges as black lines
+- player points as circles/stars
+"""
+function plot_voronoi(vor_cells::Dict{Punkt, Vector{Punkt}}, 
+                      vor_edges::Vector{Tuple{Punkt, Punkt}}, 
+                      player1::Player, 
+                      player2::Player, 
+                      dummy_points::Vector{Punkt})
+
+    plt = plot(aspect_ratio=:equal, legend=false, size=(800,800), grid=false)
+
+    # Plot each player cell
+    for (site, polygon) in vor_cells
+        if site in dummy_points
+            continue
         end
 
-        # Extrahiere die x- und y-Koordinaten der Polygonpunkte
+        # Determine color
+        color = :gray
+        if site in player1.points
+            color = player1.color
+        elseif site in player2.points
+            color = player2.color
+        end
+
         xs = [p.x for p in polygon]
         ys = [p.y for p in polygon]
 
-        # Schließe das Polygon durch Rückkehr zum Startpunkt
+        # Close polygon
         push!(xs, polygon[1].x)
         push!(ys, polygon[1].y)
 
-        # Zeichne die gefüllte Zelle mit schwarzer Umrandung
         plot!(xs, ys, seriestype=:shape, fillalpha=0.4, c=color, linecolor=:black)
     end
 
-    # Zeichne Spieler 1 Punkte (Kreise)
+    # Plot Voronoi edges
+    for (c1, c2) in vor_edges
+        plot!([c1.x, c2.x], [c1.y, c2.y], color=:black, lw=1)
+    end
+
+    # Plot Voronoi vertices
+    vor_vertices = [v for verts in values(vor_cells) for v in verts]
+    scatter!([v.x for v in vor_vertices], [v.y for v in vor_vertices],
+             color=:green, marker=:diamond, markersize=4)
+
+    # Plot player points
     scatter!([p.x for p in player1.points],
              [p.y for p in player1.points],
              color=player1.color,
-             label=player1.name,
-             markersize=6,
-             marker=:circle)
+             marker=:circle,
+             markersize=6)
 
-    # Zeichne Spieler 2 Punkte (Sterne)
     scatter!([p.x for p in player2.points],
              [p.y for p in player2.points],
              color=player2.color,
-             label=player2.name,
-             markersize=6,
-             marker=:star5)
+             marker=:star5,
+             markersize=6)
 
-    # Anzeige des Plots
     display(plt)
+end
+
+
+
+
+
+function clip_polygon_to_rect(polygon::Vector{Punkt}, xmin::Float64, xmax::Float64, ymin::Float64, ymax::Float64)
+    # Convert to tuples for easier math
+    poly = [(p.x, p.y) for p in polygon]
+
+    function inside(p, edge)
+        x, y = p
+        edge == :left   && return x >= xmin
+        edge == :right  && return x <= xmax
+        edge == :bottom && return y >= ymin
+        edge == :top    && return y <= ymax
+    end
+
+    function intersect(p1, p2, edge)
+        x1, y1 = p1
+        x2, y2 = p2
+        if edge == :left
+            x = xmin
+            y = y1 + (y2-y1)*(xmin-x1)/(x2-x1)
+        elseif edge == :right
+            x = xmax
+            y = y1 + (y2-y1)*(xmax-x1)/(x2-x1)
+        elseif edge == :bottom
+            y = ymin
+            x = x1 + (x2-x1)*(ymin-y1)/(y2-y1)
+        elseif edge == :top
+            y = ymax
+            x = x1 + (x2-x1)*(ymax-y1)/(y2-y1)
+        end
+        return (x,y)
+    end
+
+    for edge in [:left, :right, :bottom, :top]
+        output = []
+        n = length(poly)
+        for i in 1:n
+            curr = poly[i]
+            prev = poly[mod1(i-1,n)]
+            if inside(curr, edge)
+                if !inside(prev, edge)
+                    push!(output, intersect(prev, curr, edge))
+                end
+                push!(output, curr)
+            elseif inside(prev, edge)
+                push!(output, intersect(prev, curr, edge))
+            end
+        end
+        poly = output
+    end
+
+    return [Punkt(x,y) for (x,y) in poly]
 end

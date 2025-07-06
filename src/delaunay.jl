@@ -1,3 +1,5 @@
+using LinearAlgebra
+
 include("structures.jl")
 
 # Fonction pour créer un triangle
